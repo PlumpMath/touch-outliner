@@ -1,0 +1,19 @@
+/* some style */
+
+ul {
+  list-style: none;
+  margin:0;
+  padding:0
+}
+
+li {
+    padding: 5px;
+    border: 1px solid white;
+    background:#e2e2e2
+}
+
+li.placeholder {background: rgb(255,240,120);}
+li.placeholder:before {
+  content: "Drop here";
+  color: rgb(225,210,90);
+}
