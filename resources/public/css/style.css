@@ -9,11 +9,13 @@ ul {
 li {
     padding: 5px;
     border: 1px solid white;
-    background:#e2e2e2
+    background:#e2e2e2;
+    min-height: 1em;
 }
 
-li.placeholder {background: rgb(255,240,120);}
-li.placeholder:before {
-  content: "Drop here";
-  color: rgb(225,210,90);
+li.hoverbar {
+    height: 0;
+    padding: 0;
+    min-height: 0;
+    box-shadow: 0 -2px 0 #ccc;
 }
