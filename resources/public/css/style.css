@@ -13,9 +13,14 @@ li {
     min-height: 1em;
 }
 
-li.hoverbar {
+li.placeholder {
+    min-height: 0; 
+    border: none;
+    border-top: 2px solid #222;
     height: 0;
     padding: 0;
-    min-height: 0;
-    box-shadow: 0 -2px 0 #ccc;
+}
+
+li.dummy-element {
+    background: none;
 }
