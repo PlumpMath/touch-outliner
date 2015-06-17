@@ -21,13 +21,13 @@
 ;;; ------------------------------------------------------------------------------
 
 (def initial-state
-  {:mode     :tree
-   :drag-idx nil
-   :over-idx false
+  {:mode      :tree
+   :state     :static
+   :selected  nil 
+   :dragged   nil 
    :window-width 0
-   :entries ["Red" "Green" "Blue" "Yellow" "Black" "White" "Orange"]
+   :entries (vec (map #(apply str (take 5 (repeat (str % " ")))) (range 40))) 
    :bounding-boxes []
-   :hovered nil
    })
 
 ;;; handlers
@@ -38,6 +38,29 @@
  (fn 
    [db _]
    (merge db initial-state)))
+
+(register-handler                
+ :item-mouse-down
+ (fn 
+   [db [_ idx]]
+   (assoc db :selected idx
+             :state    :pressed)
+   ))
+
+(register-handler
+ :window-mouse-up
+ (fn [db _]
+   (cond
+     (= :pressed (:state db))
+     (do
+       (println "pressed " (:selected db))
+       (assoc db
+              :state :static
+              :selected nil
+              :dragged nil))
+     
+     :else db
+     )))
 
 (register-handler                
  :window-width
@@ -55,21 +78,17 @@
   (first (drop-while (complement f) coll)))
 
 (register-handler                
- :touchmove
+ :window-mouse-move
  (fn 
-   [db [_ [x y]]]
-   (if (nil? (:activated db))
-     db
-     (let [hover-idx
-           (get (find-first (fn [[box-top box-bottom n]]
-                              (and (<= box-top y)
-                                   (> box-bottom y)
-                                   ))
-                            (:bounding-boxes db)) 2)]
-       (if (nil? hover-idx)
-         db
-         (assoc db :hovered hover-idx))
-       ))))
+   [db _]
+   (cond
+     
+     (and (:selected db)
+          (= :pressed (:state db)))
+     (assoc db :state :dragging)
+     
+     :else db
+     )))
 
 (register-handler
  :activate
@@ -77,28 +96,6 @@
    (if (nil? (:activated db))
      (assoc db :activated {:idx n :touchid id})
      db)))
-
-(defn vec-swap [v idx1 idx2]
-  (assoc v idx2 (v idx1) idx1 (v idx2)))
-
-(register-handler
- :touchend
- (fn [db [_ id]]
-   (if (or (nil? (:activated db)) (not= id (:touchid (:activated db))))
-     db
-     (let [entries (:entries db)
-           hovered (:hovered db)
-           new-entries (if (nil? hovered)
-                         entries
-                         (vec-swap entries
-                                   (js/parseInt hovered 10)
-                                   (js/parseInt (:idx (:activated db)) 10)))]
-
-       (assoc db
-              :activated nil
-              :hovered nil
-              :entries new-entries))
-     )))
 
 ;;; subscriptions
 ;;; ------------------------------------------------------------------------------
@@ -115,11 +112,11 @@
   (fn
     [n entry]
     (let [activated (subscribe [:activated])
-          hovered (subscribe [:hovered])]
+          hovered   (subscribe [:hovered])]
       [:li
        {:data-idx n
         :key n
-        :on-touch-start #(dispatch [:activate n (.-identifier (aget (.-targetTouches %) 0))])
+        :on-mouse-down #(dispatch [:item-mouse-down n ])
         :style {:background (cond (= n (:idx @activated)) "red"
                                   (= (str n) @hovered) "blue"
                                   :else "#f2f2f2")}
@@ -155,8 +152,9 @@
 (def sortable-list 
   (with-meta
     (fn [] sortable-list-component)
-    {:component-did-mount update-dims
-     :component-did-update update-dims}
+    {;:component-did-mount update-dims
+     ;:component-did-update update-dims
+     }
     ))
 
 (defn application []
@@ -178,16 +176,16 @@
     (.addEventListener js/window "resize"
                        (fn [ev] (dispatch [:window-width (.-innerWidth js/window)])))
     
-    (.addEventListener js/window "touchmove"
+    (.addEventListener js/window "mousemove"
                        (fn [ev]
                          (.preventDefault ev)
-                         (let [tch (aget (.-targetTouches ev) 0)]
-                           (dispatch [:touchmove [(.-pageX tch) (.-pageY tch)]]))))
+                         (dispatch [:window-mouse-move])
+                         ))
     
-    (.addEventListener js/window "touchend"
+    (.addEventListener js/window "mouseup"
                        (fn [ev]
-                         (let [tch (aget (.-changedTouches ev) 0)]
-                           (dispatch [:touchend (.-identifier tch)]))))
+                         (dispatch [:window-mouse-up])
+                         ))
     ))
 
 (defn ^:export run
